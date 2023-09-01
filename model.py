@@ -82,13 +82,9 @@ class FastGAT(MessagePassing):
             self.register_parameter('bias', None)
 
         self.reset_parameters()
-
         self.global_att = None
         self.global_att_linear = Linear(1, heads)
-
-
-
-
+        
     def reset_parameters(self):
         self.lin_src.reset_parameters()
         self.lin_dst.reset_parameters()
@@ -98,9 +94,7 @@ class FastGAT(MessagePassing):
         # glorot(self.att_dst)
         glorot(self.att_edge)
         zeros(self.bias)
-
-
-
+        
     def forward(self, x: Union[Tensor, OptPairTensor], edge_index: Adj, global_att = None,
                 edge_attr: OptTensor = None, size: Size = None,
                 return_attention_weights=None):
@@ -119,10 +113,7 @@ class FastGAT(MessagePassing):
             x_src = self.lin_src(x_src).view(-1, H, C)
             if x_dst is not None:
                 x_dst = self.lin_dst(x_dst).view(-1, H, C)
-
-        x = (x_src, x_dst) # x_src: [2708, 8, 64], same as x_dst
-
-
+        x = (x_src, x_dst) 
         if self.add_self_loops:
             if isinstance(edge_index, Tensor):
                 # We only want to add self-loops for nodes that appear both as
@@ -149,18 +140,13 @@ class FastGAT(MessagePassing):
 
         if self.global_att is None:
             self.global_att = global_att
-            _global_att = self.global_att_linear(self.entropy_g) #[2708, 128] by natural order
-            alpha_e = (global_att, global_att)
-            alpha_e = self.edge_updater(edge_index, alpha=alpha_e, edge_attr=edge_attr)
-        
-        else:
-            global_att = self.global_att_linear(self.entropy_g) #[2708, 128] by natural order;
-
-
+            _global_att = self.global_att_linear(self.entropy_g) 
             alpha = (global_att, global_att)
             alpha = self.edge_updater(edge_index, alpha=alpha, edge_attr=edge_attr)
-
-            # #######
+        else:
+            global_att = self.global_att_linear(self.entropy_g) 
+            alpha = (global_att, global_att)
+            alpha = self.edge_updater(edge_index, alpha=alpha, edge_attr=edge_attr)
 
        
         # propagate_type: (x: OptPairTensor, alpha: Tensor)
@@ -171,8 +157,6 @@ class FastGAT(MessagePassing):
             out = out.view(-1, self.heads * self.out_channels)
         else:
             out = out.mean(dim=1)
-        
-        # print(out.size())
 
         if self.bias is not None:
             out = out + self.bias
